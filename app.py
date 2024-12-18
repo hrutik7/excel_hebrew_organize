@@ -96,7 +96,7 @@ def process_excel_file(file_path):
             name_str = re.sub(r'\s*None\s*', '', name_str)
     
     # Return the cleaned name, or None if the result is empty
-            print(name_str if name_str else None,"name_str if name_str else None")
+            
             return name_str if name_str else None
         
         def extract_serial(serial_text):
@@ -157,7 +157,7 @@ def process_excel_file(file_path):
         )
        
        
-        print(df_sorted,"laugh")
+        
         
         return df_sorted, df_sorted.to_dict(orient='records')
 
@@ -228,82 +228,26 @@ def format_response(data):
 
     # Select and rename columns
     formatted_df = df[list(required_columns.keys())].rename(columns=required_columns)
-
+    
     # Drop rows with missing required values
     formatted_df.dropna(subset=required_columns.values(), inplace=True)
-
+    print(formatted_df.dropna(subset=required_columns.values(), inplace=True),"formatted_df")
     # Sort by the desired columns
-    formatted_df.sort_values(by=["Storage", "Shelf", "Position1", "Position2","Serial_Number"], inplace=True)
+    formatted_df.sort_values(by=["Storage", "Shelf", "Position1", "Position2","Serial_Number","quantity","Name","Customer","Client"], inplace=True)
     excel_filename = 'formatted_locations.xlsx'
     formatted_df.to_excel(excel_filename, index=False)
     formatted_df_json = formatted_df.to_dict(orient='records')
     return formatted_df_json
 
-# Example data (replace this with your actual data)
-    example_data = [
-        {
-            "Original_Location": "1B-2/1",
-            "Parsed_Location_Storage": 1,
-            "Parsed_Location_Shelf": "B",
-            "Parsed_Location_Position1": 2.0,
-            "Parsed_Location_Position2": 1.0
-        },
-    # Add more dictionaries here with the same structure
-    ]
-    
-    # Format the data
-    formatted_df = format_response(example_data)
-    
-    # Export to Excel
+
     
     
-    print(f"Data exported to {excel_filename}")
-    print("\nDataFrame Preview:")
-    print(formatted_df)
+    
 
 
-# def format_response(data):
-#     """
-#     Format the parsed list of dictionaries to the desired structure.
-#     """
-#     # Ensure data is a list of dictionaries
-#     if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
-#         raise ValueError("Invalid data format. Expected a list of dictionaries.")
-
-#     # Load data into a DataFrame
-#     df = pd.DataFrame(data)
-
-#     # Extract and rename the relevant columns
-#     required_columns = {
-#         "Original_Location": "Original_Location",
-#         "Parsed_Location_Storage": "Storage",
-#         "Parsed_Location_Shelf": "Shelf",
-#         "Parsed_Location_Position1": "Position1",
-#         "Parsed_Location_Position2": "Position2"
-#     }
-
-#     # Check if all required columns are present
-#     if not all(col in df.columns for col in required_columns.keys()):
-#         raise ValueError(f"Missing required columns in data. Expected columns: {list(required_columns.keys())}")
-
-#     # Select and rename columns
-#     formatted_df = df[list(required_columns.keys())].rename(columns=required_columns)
-
-#     # Drop rows with missing required values
-#     formatted_df.dropna(subset=required_columns.values(), inplace=True)
-
-#     # Sort by the desired columns
-#     formatted_df.sort_values(by=["Storage", "Shelf", "Position1", "Position2"], inplace=True)
-
-#     return formatted_df
 
 
-# Example: Process the uploaded data (replace `json_data` with your JSON response)
-# json_data = { ... }  # Load the JSON response
-# formatted_df = format_response(json_data)
 
-# Save the DataFrame to Excel
-# formatted_df.to_excel("formatted_output.xlsx", index=False)
 
 @app.route('/api/upload-excel', methods=['POST'])
 def upload_excel():
