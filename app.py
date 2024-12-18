@@ -8,7 +8,8 @@ import io
 import numpy as np
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173"]}})
+BASE_URL = os.getenv("BASE_URL", "http://localhost:5173")  # Default to localhost if not set
+CORS(app, resources={r"/api/*": {"origins": [BASE_URL]}})
 
 app.config['DEBUG'] = True
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -319,4 +320,5 @@ def download_processed():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 5000))  # Default to 5000
+    app.run(host='0.0.0.0', port=port, debug=(os.getenv("FLASK_ENV") == "development"))

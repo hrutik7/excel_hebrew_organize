@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const BACKEND_PORT = 'http://localhost:5000';
+const BACKEND_PORT = process.env.NODE_ENV === 'production' 
+  ? 'https://excel-hebrew-organize.onrender.com' 
+  : 'http://localhost:5000';
 
 const ExcelFileUploader = () => {
   const [file, setFile] = useState(null);
