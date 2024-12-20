@@ -14,6 +14,21 @@ const ExcelFileUploader = () => {
   const [uploadResult, setUploadResult] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedColumns, setSelectedColumns] = useState({
+    Storage: true,
+    Shelf: true,
+    Position1: true,
+    Position2: true,
+    Name: true,
+    Serial_Number: true,
+    Original_Location: true,
+    quantity: true,
+    Customer: true,
+    Client: true,
+    Price_Per_Unit: true,
+    Total_NIS: true
+  });
+
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
 
@@ -108,7 +123,14 @@ const ExcelFileUploader = () => {
     }
   };
 
-  const exportTOPDF = () => {
+  const handleColumnToggle = (columnName) => {
+    setSelectedColumns(prev => ({
+      ...prev,
+      [columnName]: !prev[columnName]
+    }));
+  };
+
+  const exportToPDF = () => {
     if (!uploadResult) {
       setError("No data available to export as PDF");
       return;
@@ -120,35 +142,17 @@ const ExcelFileUploader = () => {
       // Title
       doc.text("Table Export", 14, 10);
 
-      // Prepare data for autoTable
-      const tableColumns = [
-        "Storage",
-        "Shelf",
-        "Position 1",
-        "Position 2",
-        "Name",
-        "Serial Number",
-        "Original Location",
-        "Quantity",
-        "Customer",
-        "Client",
-        "Price per unit",
-        "Total NIS",
-      ];
-      const tableRows = uploadResult.map((item) => [
-        item.Storage,
-        item.Shelf,
-        item.Position1,
-        item.Position2,
-        item.Name,
-        item.Serial_Number,
-        item.Original_Location,
-        item.quantity,
-        item.Customer,
-        item.Client,
-        item.Price_Per_Unit,
-        item.Total_NIS,
-      ]);
+      // Filter columns based on selection
+      const tableColumns = Object.entries(selectedColumns)
+        .filter(([_, isSelected]) => isSelected)
+        .map(([columnName]) => columnName.replace(/_/g, ' '));
+
+      // Prepare rows with only selected columns
+      const tableRows = uploadResult.map((item) =>
+        Object.entries(selectedColumns)
+          .filter(([_, isSelected]) => isSelected)
+          .map(([columnName]) => item[columnName])
+      );
 
       // Generate table
       doc.autoTable({
@@ -223,7 +227,7 @@ const ExcelFileUploader = () => {
           </button>
 
 <button
-onClick={exportTOPDF}
+onClick={exportToPDF}
 className="w-full py-2 px-4 mt-5 rounded-md text-white font-semibold 
 bg-red-600 hover:bg-red-700 active:bg-red-800"
 >
@@ -236,102 +240,51 @@ Export to PDF
       {uploadResult && (
         <div className="mt-4 p-4 bg-green-50 rounded-md">
           <h3 className="text-green-800 font-bold mb-2">Upload Successful</h3>
-          <pre className="text-xs overflow-x-auto">
-            {/* {JSON.stringify(uploadResult, null, 2)} */}
-            {loading ? (
-              <div className="text-center text-lg">Loading...</div>
-            ) : (
-              <div className="overflow-x-auto overflow-y-auto max-w-screen-lg w-[100%] bg-white shadow rounded-lg">
-                <table className="min-w-full table-auto">
-                  <thead className="bg-gray-200">
-                    <tr>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Storage
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Shelf
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Position 1
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Position 2
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Name
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Serial Number
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Original Location
-                      </th>
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold mb-2">Select Columns to Display:</h4>
+            <div className="flex flex-wrap gap-2">
+              {Object.keys(selectedColumns).map((columnName) => (
+                <label key={columnName} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns[columnName]}
+                    onChange={() => handleColumnToggle(columnName)}
+                    className="form-checkbox h-4 w-4 text-blue-600"
+                  />
+                  <span className="text-sm">{columnName.replace(/_/g, ' ')}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Quantity
+          <div className="overflow-x-auto overflow-y-auto max-w-screen-lg w-[100%] bg-white shadow rounded-lg">
+            <table className="min-w-full table-auto">
+              <thead className="bg-gray-200">
+                <tr>
+                  {Object.entries(selectedColumns).map(([columnName, isSelected]) => 
+                    isSelected && (
+                      <th key={columnName} className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
+                        {columnName.replace(/_/g, ' ')}
                       </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Customer
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Client
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Price per unit
-                      </th>
-                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
-                        Total NIS
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {uploadResult?.map((item, index) => (
-                      <tr key={index}>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Storage}
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {uploadResult?.map((item, index) => (
+                  <tr key={index}>
+                    {Object.entries(selectedColumns).map(([columnName, isSelected]) => 
+                      isSelected && (
+                        <td key={columnName} className="py-4 px-6 text-sm text-gray-700">
+                          {item[columnName]}
                         </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Shelf}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Position1}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Position2}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Name}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Serial_Number}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Original_Location}
-                        </td>
-
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.quantity}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Customer}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Client}
-                        </td>
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Price_Per_Unit}
-                        </td>
-
-                        <td className="py-4 px-6 text-sm text-gray-700">
-                          {item.Total_NIS}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </pre>
+                      )
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
