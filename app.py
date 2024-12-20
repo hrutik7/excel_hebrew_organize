@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, make_response
 from werkzeug.utils import secure_filename
 import pandas as pd
 import os
@@ -6,6 +6,14 @@ import re
 from flask_cors import CORS
 import io
 import numpy as np
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import landscape, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
 
 app = Flask(__name__)
 BASE_URL = os.getenv("BASE_URL", "http://localhost:5173")  # Default to localhost if not set
@@ -259,16 +267,6 @@ def format_response(data):
     
     return formatted_df_json
 
-
-    
-    
-    
-
-
-
-
-
-
 @app.route('/api/upload-excel', methods=['POST'])
 def upload_excel():
     
@@ -332,6 +330,143 @@ def download_processed():
         )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/generate-pdf', methods=['POST'])
+def generate_pdf():
+    try:
+        # Get data from request
+        data = request.json.get('data', [])
+        
+        # Create a BytesIO buffer for the PDF
+        buffer = io.BytesIO()
+        
+        # Create the PDF document
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A4),
+            rightMargin=20,
+            leftMargin=20,
+            topMargin=30,
+            bottomMargin=30
+        )
+        
+        # Get the available width and calculate column widths
+        available_width = doc.width
+        col_widths = [
+            available_width * 0.05,  # Storage
+            available_width * 0.05,  # Shelf
+            available_width * 0.06,  # Position 1
+            available_width * 0.06,  # Position 2
+            available_width * 0.15,  # Name
+            available_width * 0.1,   # Serial Number
+            available_width * 0.1,   # Original Location
+            available_width * 0.08,  # Quantity
+            available_width * 0.1,   # Customer
+            available_width * 0.1,   # Client
+            available_width * 0.08,  # Price per unit
+            available_width * 0.07   # Total NIS
+        ]
+        
+        # Define the table headers
+        headers = [
+            'Storage', 'Shelf', 'Position 1', 'Position 2', 'Name',
+            'Serial Number', 'Original Location', 'Quantity', 'Customer',
+            'Client', 'Price per unit', 'Total NIS'
+        ]
+        
+        # Prepare the data for the table
+        table_data = [headers]
+        
+        # Add the data rows
+        for item in data:
+            row = [
+                str(item.get('Storage', '')),
+                str(item.get('Shelf', '')),
+                str(item.get('Position1', '')),
+                str(item.get('Position2', '')),
+                str(item.get('Name', '')),
+                str(item.get('Serial_Number', '')),
+                str(item.get('Original_Location', '')),
+                str(item.get('quantity', '')),
+                str(item.get('Customer', '')),
+                str(item.get('Client', '')),
+                str(item.get('Price_Per_Unit', '')),
+                str(item.get('Total_NIS', ''))
+            ]
+            table_data.append(row)
+        
+        # Create the table with specific column widths
+        table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        
+        # Style the table
+        style = TableStyle([
+            # Header styling
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#333333')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            
+            # Data row styling
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            
+            # Alternating row colors
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+            
+            # Vertical alignment
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
+            # Row height
+            ('ROWHEIGHT', (0, 0), (-1, 0), 30),
+            ('ROWHEIGHT', (0, 1), (-1, -1), 25),
+            
+            # Borders
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            
+            # Word wrap
+            ('WORDWRAP', (0, 0), (-1, -1), True),
+        ])
+        
+        table.setStyle(style)
+        
+        # Add title
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=1  # Center alignment
+        )
+        
+        title = Paragraph("Inventory Report", title_style)
+        
+        # Build the PDF with title and table
+        elements = [title, table]
+        doc.build(elements)
+        
+        # Get the value of the BytesIO buffer
+        pdf = buffer.getvalue()
+        buffer.close()
+        
+        # Create the response
+        response = make_response(pdf)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = 'attachment; filename=inventory_report.pdf'
+        
+        return response
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))  # Default to 5000

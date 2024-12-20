@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const BACKEND_PORT =
   process.env.NODE_ENV === "production"
@@ -53,9 +55,8 @@ const ExcelFileUploader = () => {
         }
       );
 
-      
       const string = response.data;
-      const validate_string = string.replace(/NaN/g, 'null');
+      const validate_string = string.replace(/NaN/g, "null");
       try {
         const resultArray = JSON.parse(validate_string);
         console.log(resultArray, "resultArray");
@@ -103,6 +104,64 @@ const ExcelFileUploader = () => {
       link.remove();
     } catch (err) {
       setError("Download failed");
+      console.error(err);
+    }
+  };
+
+  const exportTOPDF = () => {
+    if (!uploadResult) {
+      setError("No data available to export as PDF");
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+
+      // Title
+      doc.text("Table Export", 14, 10);
+
+      // Prepare data for autoTable
+      const tableColumns = [
+        "Storage",
+        "Shelf",
+        "Position 1",
+        "Position 2",
+        "Name",
+        "Serial Number",
+        "Original Location",
+        "Quantity",
+        "Customer",
+        "Client",
+        "Price per unit",
+        "Total NIS",
+      ];
+      const tableRows = uploadResult.map((item) => [
+        item.Storage,
+        item.Shelf,
+        item.Position1,
+        item.Position2,
+        item.Name,
+        item.Serial_Number,
+        item.Original_Location,
+        item.quantity,
+        item.Customer,
+        item.Client,
+        item.Price_Per_Unit,
+        item.Total_NIS,
+      ]);
+
+      // Generate table
+      doc.autoTable({
+        head: [tableColumns],
+        body: tableRows,
+        startY: 20,
+        theme: "grid",
+      });
+
+      // Save PDF
+      doc.save("table-export.pdf");
+    } catch (err) {
+      setError("Failed to generate PDF");
       console.error(err);
     }
   };
@@ -163,7 +222,15 @@ const ExcelFileUploader = () => {
           </button>
         )}
       </div>
-
+      {uploadResult && (
+        <button
+          onClick={exportTOPDF}
+          className="w-full py-2 px-4 rounded-md text-white font-semibold 
+      bg-red-600 hover:bg-red-700 active:bg-red-800"
+        >
+          Export to PDF
+        </button>
+      )}
       {uploadResult && (
         <div className="mt-4 p-4 bg-green-50 rounded-md">
           <h3 className="text-green-800 font-bold mb-2">Upload Successful</h3>
