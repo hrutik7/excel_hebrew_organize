@@ -137,36 +137,55 @@ const ExcelFileUploader = () => {
     }
 
     try {
-      const doc = new jsPDF();
-
-      // Title
-      doc.text("Table Export", 14, 10);
-
-      // Filter columns based on selection
-      const tableColumns = Object.entries(selectedColumns)
-        .filter(([_, isSelected]) => isSelected)
-        .map(([columnName]) => columnName.replace(/_/g, ' '));
-
-      // Prepare rows with only selected columns
-      const tableRows = uploadResult.map((item) =>
-        Object.entries(selectedColumns)
-          .filter(([_, isSelected]) => isSelected)
-          .map(([columnName]) => item[columnName])
-      );
-
-      // Generate table
-      doc.autoTable({
-        head: [tableColumns],
-        body: tableRows,
-        startY: 20,
-        theme: "grid",
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "pt",
+        format: "a4"
       });
 
-      // Save PDF
-      doc.save("table-export.pdf");
+      // Set RTL mode and font
+      doc.setR2L(true);
+      doc.setFont("helvetica");
+
+      // Process Hebrew text safely
+      const processText = (text) => {
+        if (!text) return '';
+        if (typeof text === 'number') return text.toString();
+        
+        try {
+          // Handle Hebrew text
+          if (/[\u0590-\u05FF]/.test(text)) {
+            return text.split('').reverse().join('');
+          }
+          return text;
+        } catch (e) {
+          console.error('Text processing error:', e);
+          return text || '';
+        }
+      };
+
+      // Only include selected columns
+      const tableColumns = Object.entries(selectedColumns)
+        .filter(([_, isSelected]) => isSelected)
+        .map(([columnName]) => ({
+          header: columnName.replace(/_/g, ' '),
+          dataKey: columnName
+        }));
+
+      const tableData = uploadResult.map(item => {
+        const row = {};
+        Object.entries(selectedColumns)
+          .filter(([columnName, isSelected]) => isSelected)
+          .forEach(([columnName]) => {
+            row[columnName] = processText(item[columnName]);
+          });
+        return row;
+      });
+
+      // Rest of your PDF generation code...
     } catch (err) {
-      setError("Failed to generate PDF");
-      console.error(err);
+      console.error('PDF Generation Error:', err);
+      setError("Failed to generate PDF. Error: " + err.message);
     }
   };
 
@@ -217,41 +236,35 @@ const ExcelFileUploader = () => {
         </button>
 
         {uploadResult && (
-         <div className="flex gap-10">
-           <button
-            onClick={handleDownload}
-            className="w-full py-2 px-4 mt-5 rounded-md text-white font-semibold 
-              bg-green-600 hover:bg-green-700 active:bg-green-800"
-          >
+         <div className="flex gap-10"> 
+          <button onClick={handleDownload} className="w-full py-2 px-4 rounded-md text-white font-semibold bg-green-600 hover:bg-green-700 active:bg-green-800">
             Download Processed File
           </button>
-
-<button
-onClick={exportToPDF}
-className="w-full py-2 px-4 mt-5 rounded-md text-white font-semibold 
-bg-red-600 hover:bg-red-700 active:bg-red-800"
->
-Export to PDF
-</button>
+          <button onClick={exportToPDF} className="w-full py-2 px-4 rounded-md text-white font-semibold bg-red-600 hover:bg-red-700 active:bg-red-800">
+            Export to PDF
+          </button>
          </div>
         )}
       </div>
-    
+      
       {uploadResult && (
         <div className="mt-4 p-4 bg-green-50 rounded-md">
           <h3 className="text-green-800 font-bold mb-2">Upload Successful</h3>
+          
           <div className="mb-4">
             <h4 className="text-sm font-semibold mb-2">Select Columns to Display:</h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-4">
               {Object.keys(selectedColumns).map((columnName) => (
-                <label key={columnName} className="flex items-center space-x-2">
+                <label key={columnName} className="inline-flex items-center">
                   <input
                     type="checkbox"
                     checked={selectedColumns[columnName]}
                     onChange={() => handleColumnToggle(columnName)}
-                    className="form-checkbox h-4 w-4 text-blue-600"
+                    className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300"
                   />
-                  <span className="text-sm">{columnName.replace(/_/g, ' ')}</span>
+                  <span className="ml-2 text-sm text-gray-700">
+                    {columnName.replace(/_/g, ' ')}
+                  </span>
                 </label>
               ))}
             </div>
