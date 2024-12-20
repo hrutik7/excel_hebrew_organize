@@ -53,7 +53,16 @@ const ExcelFileUploader = () => {
         }
       );
 
-      setUploadResult(response.data);
+      
+      const string = response.data;
+      const validate_string = string.replace(/NaN/g, 'null');
+      try {
+        const resultArray = JSON.parse(validate_string);
+        console.log(resultArray, "resultArray");
+        setUploadResult(resultArray);
+      } catch (error) {
+        console.log("error", error);
+      }
       setLoading(false);
       setUploading(false);
     } catch (err) {
@@ -73,7 +82,7 @@ const ExcelFileUploader = () => {
       const response = await axios.post(
         `${BACKEND_PORT}/api/download-processed`,
         {
-          data: uploadResult.data,
+          data: uploadResult,
           filename: uploadResult.filename || "processed_file.xlsx",
         },
         {
@@ -198,10 +207,16 @@ const ExcelFileUploader = () => {
                       <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
                         Client
                       </th>
+                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
+                        Price per unit
+                      </th>
+                      <th className="py-3 px-6 text-left text-sm font-semibold text-gray-600">
+                        Total NIS
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {uploadResult.data.map((item, index) => (
+                    {uploadResult?.map((item, index) => (
                       <tr key={index}>
                         <td className="py-4 px-6 text-sm text-gray-700">
                           {item.Storage}
@@ -233,6 +248,13 @@ const ExcelFileUploader = () => {
                         </td>
                         <td className="py-4 px-6 text-sm text-gray-700">
                           {item.Client}
+                        </td>
+                        <td className="py-4 px-6 text-sm text-gray-700">
+                          {item.Price_Per_Unit}
+                        </td>
+
+                        <td className="py-4 px-6 text-sm text-gray-700">
+                          {item.Total_NIS}
                         </td>
                       </tr>
                     ))}

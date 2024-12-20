@@ -69,7 +69,8 @@ def process_excel_file(file_path):
         customer_col = df.iloc[:, 12]
         name_col = df.iloc[:, 6]
         client_col = df.iloc[:, 14] 
-        
+        price_per_unit = df.iloc[:, 2]
+        total_NIS = df.iloc[:, 1]
         # Extract location from parentheses
         def extract_location(text):
             if pd.isna(text):
@@ -111,6 +112,17 @@ def process_excel_file(file_path):
                 return None
             return re.sub(r'\D', '', str(quantity_text))
         
+        def extract_price_unit(price_text):
+            if pd.isna(price_text):
+                return None
+            return re.sub(r'\s*None\s*', '', str(price_text))
+        
+        def extract_NIS(NIS_text):
+            if pd.isna(NIS_text):
+                return None
+            return re.sub(r'\s*None\s*', '', str(NIS_text))
+        
+        
         def extract_customer(customer_text):
             if pd.isna(customer_text):
                 return None
@@ -128,6 +140,8 @@ def process_excel_file(file_path):
         customers = customer_col.apply(extract_customer)
         productname = description_col.apply(extract_name)
         client = client_col.apply(extract_client)
+        price_unit = price_per_unit.apply(extract_price_unit)
+        total = total_NIS.apply(extract_NIS)
         # Create new columns from parsed locations
         df['Original_Location'] = locations
         df['Parsed_Location'] = parsed_locations
@@ -136,8 +150,8 @@ def process_excel_file(file_path):
         df['Customer'] = customers
         df['Name'] = productname
         df['Client'] = client
-        
-
+        df['Price_Per_Unit'] = price_unit
+        df['Total_NIS'] = total
         
 # Convert the result to a list or any other format you want
         
@@ -154,7 +168,7 @@ def process_excel_file(file_path):
         # Sort the dataframe using the expanded columns
         df_sorted = df.sort_values(
             by=['Parsed_Location_Storage', 'Parsed_Location_Shelf', 
-                'Parsed_Location_Position1', 'Parsed_Location_Position2','Serial_Number','Quantity','Name','Customer','Client'],
+                'Parsed_Location_Position1', 'Parsed_Location_Position2','Serial_Number','Quantity','Name','Customer','Client','Price_Per_Unit','Total_NIS'],
             key=lambda x: pd.to_numeric(x, errors='ignore')
         )
        
@@ -221,7 +235,9 @@ def format_response(data):
         "Quantity":"quantity",
         "Name":"Name",
         "Customer":"Customer",
-        "Client":"Client"
+        "Client":"Client",
+        "Price_Per_Unit":"Price_Per_Unit",
+        "Total_NIS":"Total_NIS"
     }
 
     # Check if all required columns are present
@@ -230,15 +246,17 @@ def format_response(data):
 
     # Select and rename columns
     formatted_df = df[list(required_columns.keys())].rename(columns=required_columns)
-    
-    # Drop rows with missing required values
-    formatted_df.dropna(subset=required_columns.values(), inplace=True)
-    print(formatted_df.dropna(subset=required_columns.values(), inplace=True),"formatted_df")
-    # Sort by the desired columns
-    formatted_df.sort_values(by=["Storage", "Shelf", "Position1", "Position2","Serial_Number","quantity","Name","Customer","Client"], inplace=True)
-    excel_filename = 'formatted_locations.xlsx'
+    excel_filename = 'w.xlsx'
     formatted_df.to_excel(excel_filename, index=False)
+    # Drop rows with missing required values
+    # formatted_df.dropna(subset=required_columns.values(), inplace=True)
+    # print(formatted_df.dropna(subset=required_columns.values(), inplace=True),"formatted_df")
+    # Sort by the desired columns
+    # formatted_df.sort_values(by=["Storage", "Shelf", "Position1", "Position2","Serial_Number","quantity","Name","Customer","Client"], inplace=True)
+    excel_filename = 'formatted_locations.xlsx'
+    formatted_df.to_excel(excel_filename, index=False,engine='openpyxl')
     formatted_df_json = formatted_df.to_dict(orient='records')
+    
     return formatted_df_json
 
 
@@ -284,12 +302,7 @@ def upload_excel():
             formatted_df_json = format_response(processed_data)
             # catalog_number = processed_df[''].tolist()
             
-            return jsonify({
-                'message': 'File processed successfully',
-                # 'data': processed_data,
-                'filename': f'processed_{filename}',
-                'data':formatted_df_json
-            })
+            return formatted_df_json
         
         except Exception as e:
             return jsonify({
