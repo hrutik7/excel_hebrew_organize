@@ -213,24 +213,26 @@ const ExcelFileUploader = () => {
         </button>
 
         {uploadResult && (
-          <button
+         <div className="flex gap-10">
+           <button
             onClick={handleDownload}
-            className="w-full py-2 px-4 rounded-md text-white font-semibold 
+            className="w-full py-2 px-4 mt-5 rounded-md text-white font-semibold 
               bg-green-600 hover:bg-green-700 active:bg-green-800"
           >
             Download Processed File
           </button>
+
+<button
+onClick={exportTOPDF}
+className="w-full py-2 px-4 mt-5 rounded-md text-white font-semibold 
+bg-red-600 hover:bg-red-700 active:bg-red-800"
+>
+Export to PDF
+</button>
+         </div>
         )}
       </div>
-      {uploadResult && (
-        <button
-          onClick={exportTOPDF}
-          className="w-full py-2 px-4 rounded-md text-white font-semibold 
-      bg-red-600 hover:bg-red-700 active:bg-red-800"
-        >
-          Export to PDF
-        </button>
-      )}
+    
       {uploadResult && (
         <div className="mt-4 p-4 bg-green-50 rounded-md">
           <h3 className="text-green-800 font-bold mb-2">Upload Successful</h3>
